@@ -7,9 +7,12 @@ import java.awt.event.*;
 import javax.swing.*;
 
 class MeetingAgentGui extends JFrame {
+	/**
+	 *
+	 */
+	private static final long serialVersionUID = 1L;
+
 	private MeetingAgent myAgent;
-	
-	private JTextField coco; // TODO
 	
 	MeetingAgentGui(MeetingAgent a) {
 		super(a.getLocalName());
@@ -18,7 +21,7 @@ class MeetingAgentGui extends JFrame {
 		
 		JPanel p = new JPanel();
 		p.setLayout(new GridLayout(1, 1));
-		
+
 		JButton button = new JButton("Schedule Meeting");
 		button.addActionListener(new ActionListener () {
 			public void actionPerformed(ActionEvent ev) {
@@ -30,10 +33,18 @@ class MeetingAgentGui extends JFrame {
 			}
 		});
 		
+		button.setPreferredSize(new Dimension(300,20));
 		p.add(button);
 		
 		getContentPane().add(p, BorderLayout.SOUTH);
 		
+		setResizable(false);
+
+		addWindowListener(new WindowAdapter() {
+			public void windowClosing(WindowEvent e) {
+				myAgent.doDelete();
+			}
+		});
 	}
 	
 	public void display() {
@@ -41,7 +52,7 @@ class MeetingAgentGui extends JFrame {
 		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 		int centerX = (int) screenSize.getWidth() / 2;
 		int centerY = (int) screenSize.getHeight() / 2;
-		setLocation(centerX - getWidth() / 2, centerX - getHeight() / 2);
+		setLocation(centerX - getWidth() / 2, centerY - getHeight() / 2);
 		setVisible(true);
 	}
 }
