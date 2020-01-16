@@ -16,6 +16,7 @@ public class MeetingAgent extends Agent {
 	private boolean schedulingMeeting = false;
 	private AID[] meetingAgents;
 	private final String agentType = "meeting-agent";
+	private WeekCalendar weekCalendar = new WeekCalendar(); // TODO
 
 	@Override
 	protected void setup() {
@@ -85,11 +86,11 @@ public class MeetingAgent extends Agent {
 			ex.printStackTrace();
 		}
 
-		System.out.println("Meeting Agent " + getAID().getLocalName() + " terminated!");
+		System.out.println(getAID().getLocalName() + ": terminated!");
 	}
 	
 	public void scheduleMeeting() {
-		System.out.println("cenas"); // DEBUG PRINT
+		System.out.println(weekCalendar); // DEBUG PRINT
 		schedulingMeeting = true;
 	}
 
