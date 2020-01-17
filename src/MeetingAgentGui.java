@@ -33,7 +33,7 @@ class MeetingAgentGui extends JFrame {
 			}
 		});
 		
-		button.setPreferredSize(new Dimension(300,20));
+		button.setPreferredSize(new Dimension(300,30));
 		p.add(button);
 		
 		getContentPane().add(p, BorderLayout.SOUTH);
