@@ -53,6 +53,44 @@ public class WeekCalendar {
 	public boolean isAvailable(int day, int hour) {
 		return availability[day * NUMBER_OF_HOURS + hour];
 	}
+
+	public static String getWeekDayName(int day) {
+		String result = "";
+
+		switch (day) {
+			case 0:
+				result = "Monday";
+				break;
+			case 1:
+				result = "Tuesday";
+				break;
+			case 2:
+				result = "Wednesday";
+				break;
+			case 3:
+				result = "Thursday";
+				break;
+			case 4:
+				result = "Friday";
+				break;
+			case 5: 
+				result = "Saturday";
+				break;
+			case 6:
+				result = "Sunday";
+				break;
+		}
+
+		return result;
+	}
+
+	public void scheduleMeeting(int day, int hour) {
+		availability[day * NUMBER_OF_HOURS + hour] = true;
+	}
+
+	public void cancelMeeting(int day, int hour) {
+		availability[day * NUMBER_OF_HOURS + hour] = false;
+	}
 }
 
 	

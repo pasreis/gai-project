@@ -20,6 +20,7 @@ public class MeetingAgent extends Agent {
 	private AID[] meetingAgents;
 	private final String agentType = "meeting-agent";
 	private WeekCalendar weekCalendar = new WeekCalendar();
+	ArrayList<int[]> availableSlots= weekCalendar.listAllAvailableSlots();;
 	private Random random = new Random();
 
 	@Override
@@ -29,7 +30,7 @@ public class MeetingAgent extends Agent {
 
 		System.out.println(getAID().getLocalName() + ": is now ready!");
 
-		final int interval = 20000;
+		final int interval = 5000;
 
 		addBehaviour(new TickerBehaviour(this, interval) {
 			@Override
@@ -96,7 +97,7 @@ public class MeetingAgent extends Agent {
 	public void scheduleMeeting() {
 		System.out.println(weekCalendar); // DEBUG PRINT
 
-		ArrayList<int[]> availableSlots = weekCalendar.listAllAvailableSlots();
+		
 
 		System.out.println("done!");
 		schedulingMeeting = true;
@@ -107,12 +108,15 @@ public class MeetingAgent extends Agent {
 		private int[] slot;
 		private int step = 0;
 		private int numberOfAttendees = 0;
+		private long begin, end;
+		private MessageTemplate template;
+		
 
 		@Override
 		public void action() {
 			switch (step) {
 				case 0:
-					// Select Attendees
+					// Select Attendees and meeting slot
 					System.out.println(getAID().getLocalName() + ": is deciding the attendees list for the meeting...");
 					
 					int maximumAttendees = meetingAgents.length - 1;
@@ -129,13 +133,54 @@ public class MeetingAgent extends Agent {
 							System.out.println(getAID().getLocalName() + ": Attendee" + (i + 1) + ": " + attendees[i].getLocalName());
 						}
 
-						step = 1;
+						System.out.println(getAID().getLocalName() + ": is choosing a meeting time...");
+						
+						slot = availableSlots.get(random.nextInt(availableSlots.size() - 1));
+
+						if (slot == null) {
+							// No available time found
+							System.out.println(getAID().getLocalName() + ": does not have any free time to held the meeting");
+							step = 10;
+						} else {
+							int day = slot[0], hour = slot[1];
+							String weekDay = WeekCalendar.getWeekDayName(day);
+
+							System.out.println(getAID().getLocalName() + ": Proposed meeting date: " + weekDay + " at " + hour + "H00");
+
+							step = 1;
+						}
 					} else {
 						step = 10; // TODO
 					}
 
 					break;
+				
+				case 1:
+					// Send INVITATIONS to the choosen attendees
+					begin = System.currentTimeMillis();
 
+					System.out.println(getAID().getLocalName() + ": is sending invitations...");
+					ACLMessage message = new ACLMessage(ACLMessage.CFP);
+
+					for (int i = 0; i < numberOfAttendees; ++i) {
+						message.addReceiver(attendees[i]);
+					}
+
+					message.setContent(Integer.toString(slot[0]) + "," + Integer.toString(slot[1]));
+					message.setConversationId("schedule-meeting");
+					message.setReplyWith("cfp" + System.currentTimeMillis());
+					
+					// block this slot, so it can be offered for another meeting!
+					weekCalendar.scheduleMeeting(slot[0], slot[1]);
+					availableSlots = weekCalendar.listAllAvailableSlots();
+
+					myAgent.send(message);
+					System.out.println(getAID().getLocalName() + ": Invitations sent! Waiting for answers...");
+
+					template = MessageTemplate.and(MessageTemplate.MatchConversationId("schedule-meeting"),
+						MessageTemplate.MatchInReplyTo(message.getReplyWith()));
+
+					step = 2;
 				default:
 					System.out.println(getAID().getLocalName() + ": Error when deciding the attendees list!");
 
