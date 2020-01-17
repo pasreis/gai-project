@@ -11,12 +11,16 @@ import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.UnreadableException;
 
+import java.util.ArrayList;
+import java.util.Random;
+
 public class MeetingAgent extends Agent {
 	private MeetingAgentGui myGui;
 	private boolean schedulingMeeting = false;
 	private AID[] meetingAgents;
 	private final String agentType = "meeting-agent";
-	private WeekCalendar weekCalendar = new WeekCalendar(); // TODO
+	private WeekCalendar weekCalendar = new WeekCalendar();
+	private Random random = new Random();
 
 	@Override
 	protected void setup() {
@@ -91,13 +95,51 @@ public class MeetingAgent extends Agent {
 	
 	public void scheduleMeeting() {
 		System.out.println(weekCalendar); // DEBUG PRINT
+
+		ArrayList<int[]> availableSlots = weekCalendar.listAllAvailableSlots();
+
+		System.out.println("done!");
 		schedulingMeeting = true;
 	}
 
 	private class BookMeetingBehavior extends Behaviour {
+		private AID[] attendees;
+		private int[] slot;
+		private int step = 0;
+		private int numberOfAttendees = 0;
+
 		@Override
 		public void action() {
-			// TODO: schedule meetings
+			switch (step) {
+				case 0:
+					// Select Attendees
+					System.out.println(getAID().getLocalName() + ": is deciding the attendees list for the meeting...");
+					
+					int maximumAttendees = meetingAgents.length - 1;
+					numberOfAttendees = random.nextInt(maximumAttendees) + 1;
+
+					System.out.println(getAID().getLocalName() + ": decided to invite " + numberOfAttendees + " attendees to the meeting!");
+
+					if (numberOfAttendees != 0) {
+						attendees = new AID[numberOfAttendees];
+
+						System.out.println(getAID().getLocalName() + ": Attendee list:");
+						for (int i = 0; i < numberOfAttendees; ++i) {
+							attendees[i] = meetingAgents[random.nextInt(meetingAgents.length - 1)];
+							System.out.println(getAID().getLocalName() + ": Attendee" + (i + 1) + ": " + attendees[i].getLocalName());
+						}
+
+						step = 1;
+					} else {
+						step = 10; // TODO
+					}
+
+					break;
+
+				default:
+					System.out.println(getAID().getLocalName() + ": Error when deciding the attendees list!");
+
+			}
 		}
 
 		@Override
