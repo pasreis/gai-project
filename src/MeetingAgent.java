@@ -48,7 +48,7 @@ public class MeetingAgent extends Agent {
 
 		addBehaviour(new ReceiveMeetingInvitation());
 		addBehaviour(new ReceiveMeetingCancelation());
-		addBehaviour(new BookMeetingBehavior());
+		addBehaviour(new ReceiveMeetingConfirmation());
 	}
 
 	@Override
@@ -71,6 +71,7 @@ public class MeetingAgent extends Agent {
 
 		System.out.println(getAID().getLocalName() + ": is going to schedule a meeting!");
 		schedulingMeeting = true;
+		addBehaviour(new BookMeetingBehavior());
 	}
 
 	private class BookMeetingBehavior extends Behaviour {
@@ -159,7 +160,7 @@ public class MeetingAgent extends Agent {
 						} else {
 							step = 10; // TODO
 						}
-
+						//System.out.println("COCO" + step);
 						break;
 					
 					case 1:
@@ -188,7 +189,6 @@ public class MeetingAgent extends Agent {
 							MessageTemplate.MatchInReplyTo(message.getReplyWith()));
 
 						step = 2;
-						System.out.println(step); // DEBUG PRINT
 
 						break;
 					case 2:
@@ -245,7 +245,7 @@ public class MeetingAgent extends Agent {
 							} else {
 								System.out.println(getAID().getLocalName() + ": " + reply.getSender().getLocalName() + " aceepted the meeting!");
 								repliesCount++;
-								if (repliesCount > attendees.length) {
+								if (repliesCount >= attendees.length) {
 									step = 3;
 								}
 							}
@@ -255,6 +255,51 @@ public class MeetingAgent extends Agent {
 						break;
 					case 3:
 						// Send meeting confirmation
+						System.out.println(getAID().getLocalName() + ": is sending confimation messages...");
+
+						ACLMessage confirmationMessage = new ACLMessage(ACLMessage.CONFIRM);
+						for (int i = 0; i < numberOfAttendees; ++i) {
+							confirmationMessage.addReceiver(attendees[i]);
+						}
+
+						confirmationMessage.setContent(Integer.toString(slot[0]) + "," + Integer.toString(slot[1]));
+						confirmationMessage.setConversationId("schedule-meeting");
+						confirmationMessage.setReplyWith("confirm" + System.currentTimeMillis());
+	
+						myAgent.send(confirmationMessage);
+
+						System.out.println(getAID().getLocalName() + ": has sent all confimation messages");
+
+						template = MessageTemplate.and(MessageTemplate.MatchConversationId("schedule-meeting"),
+							MessageTemplate.MatchInReplyTo(confirmationMessage.getReplyWith()));
+						step = 4;
+
+					case 4:
+						// Receive acknowledgements
+						ACLMessage acknowledgeMessage = myAgent.receive(template);
+						
+						if (acknowledgeMessage != null) {
+							if (acknowledgeMessage.getPerformative() == ACLMessage.AGREE) {
+								AID agent = acknowledgeMessage.getSender();
+
+								System.out.println(getAID().getLocalName() + ": received acknowledgment from " + agent.getLocalName());
+
+								repliesCount++;
+								if (repliesCount >= attendees.length) {
+									step = 5;
+								}
+							}
+						} else {
+							block();
+						}
+						break;
+					case 5:
+						// Finish!
+						int day = slot[0], hour = slot[1];
+						String weekDay = WeekCalendar.getWeekDayName(day);
+
+						System.out.println(getAID().getLocalName() + ": Meeting scheduled on " + weekDay + " at " + hour + "H00");
+
 					default:
 						System.out.println(getAID().getLocalName() + ": Error when deciding the attendees list!");
 						step = 10;
@@ -266,7 +311,12 @@ public class MeetingAgent extends Agent {
 
 		@Override
 		public boolean done() {
-			return (step == 10);
+			if (step == 10 || step == 5) {
+				schedulingMeeting = false;
+				return true;
+			} else {
+				return false;
+			}
 		}
 	}
 
@@ -347,6 +397,35 @@ public class MeetingAgent extends Agent {
 				weekCalendar.cancelMeeting(day, hour);
 
 				System.out.println(getAID().getLocalName() + ": meeting on " + weekDay + " at " + hour + "H00 has been cancelled");
+			} else {
+				block();
+			}
+		}
+	}
+
+	private class ReceiveMeetingConfirmation extends CyclicBehaviour {
+		@Override
+		public void action() {
+			MessageTemplate template = MessageTemplate.MatchPerformative(ACLMessage.CONFIRM);
+			ACLMessage message = myAgent.receive(template);
+
+			if (message != null) {
+				ACLMessage acknowledgeMessage = message.createReply();
+				String messageContent = message.getContent();
+				String[] splitedStrings = messageContent.split(",");
+
+				int day, hour;
+				day = Integer.parseInt(splitedStrings[0]);
+				hour = Integer.parseInt(splitedStrings[1]);
+
+				System.out.println(getAID().getLocalName() + ": received the confirmation for the meeting on " + WeekCalendar.getWeekDayName(day) + " at " +  hour + "H00. Sending Acknowledge...");
+
+				acknowledgeMessage.setContent(messageContent);
+				acknowledgeMessage.setPerformative(ACLMessage.AGREE);
+				
+				myAgent.send(acknowledgeMessage);
+
+				System.out.println(getAID().getLocalName() + ": acknowledge sent!");
 			} else {
 				block();
 			}
