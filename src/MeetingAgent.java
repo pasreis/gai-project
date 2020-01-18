@@ -16,6 +16,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Random;
 
+import javafx.util.Pair;
+
 public class MeetingAgent extends Agent {
 	private MeetingAgentGui myGui;
 	private boolean schedulingMeeting = false;
@@ -23,6 +25,7 @@ public class MeetingAgent extends Agent {
 	private WeekCalendar weekCalendar = new WeekCalendar();
 	ArrayList<int[]> availableSlots= weekCalendar.listAllAvailableSlots();;
 	private Random random = new Random();
+	private final long TIMEOUT = 10000;
 
 	@Override
 	protected void setup() {
@@ -108,15 +111,12 @@ public class MeetingAgent extends Agent {
 							meetingAgents = new AID[result.length - 1];
 
 							int meetingAgentsIndex = 0;
-							System.out.println("Result Length = " + result.length);
+							
 							for (int i = 0; i < result.length; ++i) {
 								if (!result[i].getName().equals(getAID().getName())) {
 									meetingAgents[meetingAgentsIndex] = result[i].getName();
 									System.out.println(myAgent.getLocalName() + ": found " + meetingAgents[meetingAgentsIndex++].getLocalName());
-								}
-
-								//System.out.println("RESULT[" + i + "] = " + result[i].getName());
-								
+								}								
 							}
 						} catch (FIPAException ex) {
 							ex.printStackTrace();
@@ -158,9 +158,9 @@ public class MeetingAgent extends Agent {
 								step = 1;
 							}
 						} else {
-							step = 10; // TODO
+							step = 10; 
 						}
-						//System.out.println("COCO" + step);
+						
 						break;
 					
 					case 1:
@@ -195,67 +195,67 @@ public class MeetingAgent extends Agent {
 						// Check the reply status: if ok then proceed with booking, if not do something TODO
 						ACLMessage reply = myAgent.receive(template);
 						
-						if (reply != null) {
-							if (reply.getPerformative() == ACLMessage.REJECT_PROPOSAL) {
-								// TODO
-								System.out.println(getAID().getLocalName() + ": " + reply.getSender().getLocalName() + " rejected the meeting!");
+						end = System.currentTimeMillis();
+						double timeElapsed = end - begin;
 
-								AID rejectingAgent = reply.getSender();
-
-								int day = slot[0], hour = slot[1];
-								weekCalendar.cancelMeeting(day, hour);
-
-								availableSlots = weekCalendar.listAllAvailableSlots();
-								
-								for (int[] proposedMeetingTime : proposedMeetingTimes) {
-									availableSlots.remove(proposedMeetingTime);
-								}
-
-								if (availableSlots.size() > 1) slot = availableSlots.get(random.nextInt(availableSlots.size() - 1));
-								else if (availableSlots.size() == 1) slot = availableSlots.get(0); // only one slot is missing
-								else slot = null; // there are no more available slots
-								
-								if (slot == null) {
-									// No more slots found
-									System.out.println(getAID().getLocalName() + ": does not have any free time to held the meeting");
-									step = 10;
-								} else {
-									day = slot[0]; hour = slot[1];
-									String weekDay = WeekCalendar.getWeekDayName(day);
-
-									System.out.println(getAID().getLocalName() + ": found new time to held the meeting: " + weekDay + " at " + hour + "H00");
-
-									step = 1;
-								}
-								
-								System.out.println(getAID().getLocalName() + ": is notifying all the attendees that meeting schedule will be changed");
-								
-								ACLMessage cancelationMessage = new ACLMessage(ACLMessage.CANCEL);
-
-								for (int i = 0; i < numberOfAttendees; ++i) {
-									if (!rejectingAgent.equals(attendees[i])) cancelationMessage.addReceiver(attendees[i]);
-								}
-
-								cancelationMessage.setContent(Integer.toString(slot[0]) + "," + Integer.toString(slot[1]));
-								cancelationMessage.setConversationId("schedule-meeting");
-								cancelationMessage.setReplyWith("cancel" + System.currentTimeMillis());
-			
-								myAgent.send(cancelationMessage);
-
-							} else {
-								System.out.println(getAID().getLocalName() + ": " + reply.getSender().getLocalName() + " aceepted the meeting!");
-								repliesCount++;
-								if (repliesCount >= attendees.length) {
-									step = 3;
-								}
-							}
+						if (timeElapsed > TIMEOUT) {
+							sendCancelMessage(Integer.toString(slot[0]) + "," + Integer.toString(slot[1]), null);
+							step = 10;
 						} else {
-							block();
+							if (reply != null) {
+								if (reply.getPerformative() == ACLMessage.REJECT_PROPOSAL) {
+									// TODO
+									System.out.println(getAID().getLocalName() + ": " + reply.getSender().getLocalName() + " rejected the meeting!");
+
+									AID rejectingAgent = reply.getSender();
+
+									int day = slot[0], hour = slot[1];
+									weekCalendar.cancelMeeting(day, hour);
+
+									availableSlots = weekCalendar.listAllAvailableSlots();
+									
+									for (int[] proposedMeetingTime : proposedMeetingTimes) {
+										availableSlots.remove(proposedMeetingTime);
+									}
+
+									if (availableSlots.size() > 1) slot = availableSlots.get(random.nextInt(availableSlots.size() - 1));
+									else if (availableSlots.size() == 1) slot = availableSlots.get(0); // only one slot is missing
+									else slot = null; // there are no more available slots
+									
+									if (slot == null) {
+										// No more slots found
+										System.out.println(getAID().getLocalName() + ": does not have any free time to held the meeting");
+										step = 10;
+									} else {
+										day = slot[0]; hour = slot[1];
+										String weekDay = WeekCalendar.getWeekDayName(day);
+
+										System.out.println(getAID().getLocalName() + ": found new time to held the meeting: " + weekDay + " at " + hour + "H00");
+
+										step = 1;
+									}
+									
+									System.out.println(getAID().getLocalName() + ": is notifying all the attendees that meeting schedule will be changed");
+									
+									sendCancelMessage(Integer.toString(slot[0]) + "," + Integer.toString(slot[1]), rejectingAgent);
+
+								} else {
+									System.out.println(getAID().getLocalName() + ": " + reply.getSender().getLocalName() + " aceepted the meeting!");
+									repliesCount++;
+									if (repliesCount >= attendees.length) {
+										step = 3;
+									}
+								}
+							} else {
+								block(TIMEOUT);
+							}
 						}
 						break;
 					case 3:
 						// Send meeting confirmation
 						System.out.println(getAID().getLocalName() + ": is sending confimation messages...");
+
+						begin = System.currentTimeMillis();
 
 						ACLMessage confirmationMessage = new ACLMessage(ACLMessage.CONFIRM);
 						for (int i = 0; i < numberOfAttendees; ++i) {
@@ -278,19 +278,27 @@ public class MeetingAgent extends Agent {
 						// Receive acknowledgements
 						ACLMessage acknowledgeMessage = myAgent.receive(template);
 						
-						if (acknowledgeMessage != null) {
-							if (acknowledgeMessage.getPerformative() == ACLMessage.AGREE) {
-								AID agent = acknowledgeMessage.getSender();
+						end = System.currentTimeMillis();
+						timeElapsed = end - begin;
 
-								System.out.println(getAID().getLocalName() + ": received acknowledgment from " + agent.getLocalName());
-
-								repliesCount++;
-								if (repliesCount >= attendees.length) {
-									step = 5;
-								}
-							}
+						if (timeElapsed > TIMEOUT) {
+							sendCancelMessage(Integer.toString(slot[0]) + "," + Integer.toString(slot[1]), null);
+							step = 10;
 						} else {
-							block();
+							if (acknowledgeMessage != null) {
+								if (acknowledgeMessage.getPerformative() == ACLMessage.AGREE) {
+									AID agent = acknowledgeMessage.getSender();
+
+									System.out.println(getAID().getLocalName() + ": received acknowledgment from " + agent.getLocalName());
+
+									repliesCount++;
+									if (repliesCount >= attendees.length) {
+										step = 5;
+									}
+								}
+							} else {
+								block(TIMEOUT);
+							}
 						}
 						break;
 					case 5:
@@ -299,9 +307,8 @@ public class MeetingAgent extends Agent {
 						String weekDay = WeekCalendar.getWeekDayName(day);
 
 						System.out.println(getAID().getLocalName() + ": Meeting scheduled on " + weekDay + " at " + hour + "H00");
-
 					default:
-						System.out.println(getAID().getLocalName() + ": Error when deciding the attendees list!");
+						System.out.println(getAID().getLocalName() + ": Error when scheduling the meeting!");
 						step = 10;
 						break;
 
@@ -318,6 +325,25 @@ public class MeetingAgent extends Agent {
 				return false;
 			}
 		}
+
+		private void sendCancelMessage(String content, AID rejectingAgent) {
+			System.out.println(getAID().getLocalName() + ": is sending cancelation messages...");
+			ACLMessage cancelationMessage = new ACLMessage(ACLMessage.CANCEL);
+
+			for (int i = 0; i < numberOfAttendees; ++i) {
+				if (rejectingAgent != null) {
+					if (!rejectingAgent.equals(attendees[i])) cancelationMessage.addReceiver(attendees[i]);
+				}
+			}
+
+			cancelationMessage.setContent(content);
+			cancelationMessage.setConversationId("schedule-meeting");
+			cancelationMessage.setReplyWith("cancel" + System.currentTimeMillis());
+
+			myAgent.send(cancelationMessage);
+
+			System.out.println(getAID().getLocalName() + ": has sent all cancelation messages!");
+		}
 	}
 
 	private class ReceiveMeetingInvitation extends CyclicBehaviour  {
@@ -325,7 +351,7 @@ public class MeetingAgent extends Agent {
 		public void action() {
 			MessageTemplate template = MessageTemplate.MatchPerformative(ACLMessage.CFP);
 			ACLMessage message = myAgent.receive(template);
-
+			
 			if (message != null) {
 				AID invitingAgent = message.getSender();
 
@@ -355,6 +381,7 @@ public class MeetingAgent extends Agent {
 					myAgent.send(acceptMessage);
 
 					System.out.println(getAID().getLocalName() + ": Aceptance message sent! Waiting for confirmation...");
+
 				} else {
 					System.out.println(getAID().getLocalName() + ": is not available for the meeting! Rejecting the invitation...");
 
@@ -389,6 +416,7 @@ public class MeetingAgent extends Agent {
 				int day, hour;
 				day = Integer.parseInt(splitedStrings[0]);
 				hour = Integer.parseInt(splitedStrings[1]);
+				int[] meetingTime = {day, hour};
 
 				String weekDay = WeekCalendar.getWeekDayName(day);
 
@@ -398,7 +426,7 @@ public class MeetingAgent extends Agent {
 
 				System.out.println(getAID().getLocalName() + ": meeting on " + weekDay + " at " + hour + "H00 has been cancelled");
 			} else {
-				block();
+				block(TIMEOUT);
 			}
 		}
 	}
@@ -427,7 +455,7 @@ public class MeetingAgent extends Agent {
 
 				System.out.println(getAID().getLocalName() + ": acknowledge sent!");
 			} else {
-				block();
+				block(TIMEOUT);
 			}
 		}
 	}
