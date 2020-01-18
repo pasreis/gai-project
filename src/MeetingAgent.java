@@ -77,6 +77,7 @@ public class MeetingAgent extends Agent {
 		private int[] slot;
 		private int step = 0;
 		private int numberOfAttendees = 0;
+		private int repliesCount = 0;
 		private long begin, end;
 		private MessageTemplate template;
 		
@@ -183,6 +184,27 @@ public class MeetingAgent extends Agent {
 
 						step = 2;
 						System.out.println(step); // DEBUG PRINT
+
+						break;
+					case 2:
+						// Check the reply status: if ok then proceed with booking, if not do something TODO
+						ACLMessage reply = myAgent.receive(template);
+						
+						if (reply != null) {
+							if (reply.getPerformative() == ACLMessage.REJECT_PROPOSAL) {
+								// TODO
+								step = 10;
+								System.out.println(getAID().getLocalName() + ": " + reply.getSender().getLocalName() + " rejected the meeting!");
+							} else {
+								System.out.println(getAID().getLocalName() + ": " + reply.getSender().getLocalName() + " aceepted the meeting!");
+							}
+							repliesCount++;
+							if (repliesCount > attendees.length) {
+								step = 3;
+							}
+						} else {
+							block();
+						}
 						break;
 					default:
 						System.out.println(getAID().getLocalName() + ": Error when deciding the attendees list!");
@@ -225,19 +247,30 @@ public class MeetingAgent extends Agent {
 					System.out.println(getAID().getLocalName() + ": is available for the meeting! Waiting for confirmation...");
 
 					weekCalendar.scheduleMeeting(day, hour);
+
+					ACLMessage acceptMessage = message.createReply();
+
+					acceptMessage.setContent(messageContent);
+					acceptMessage.setPerformative(ACLMessage.INFORM);
+
+					myAgent.send(acceptMessage);
+
+					System.out.println(getAID().getLocalName() + ": Aceptance message sent! Waiting for confirmation...");
 				} else {
 					System.out.println(getAID().getLocalName() + ": is not available for the meeting! Rejecting the invitation...");
 
-					ACLMessage rejectMessage = new ACLMessage(ACLMessage.REJECT_PROPOSAL);
+					ACLMessage rejectMessage = message.createReply();
 					
-					rejectMessage.addReceiver(invitingAgent);
 					rejectMessage.setContent(messageContent);
+					rejectMessage.setPerformative(ACLMessage.REJECT_PROPOSAL);
 
 					myAgent.send(rejectMessage);
 
 					System.out.println(getAID().getLocalName() + ": Rejection message sent! Wainting for new proposals...");
 
 				}
+			} else {
+				block();
 			}
 		}
 	}
