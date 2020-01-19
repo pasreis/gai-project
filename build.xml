@@ -23,4 +23,22 @@
       <arg value="Alicja:jadeproject.MeetingAgent();Wojciech:jadeproject.MeetingAgent();" />
     </java>
   </target>
+  <target name="run4" description="create agents" >
+    <java fork="true" classpath="jade/lib/jade.jar;build" classname="jade.Boot">
+      <arg value="-gui" />
+      <arg value="Alicja:jadeproject.MeetingAgent();Wojciech:jadeproject.MeetingAgent();Aleksandra:jadeproject.MeetingAgent();Mikolaj:jadeproject.MeetingAgent();" />
+    </java>
+  </target>
+  <target name="run6" description="create agents" >
+    <java fork="true" classpath="jade/lib/jade.jar;build" classname="jade.Boot">
+      <arg value="-gui" />
+      <arg value="Alicja:jadeproject.MeetingAgent();Wojciech:jadeproject.MeetingAgent();Aleksandra:jadeproject.MeetingAgent();Mikolaj:jadeproject.MeetingAgent();Jan:jadeproject.MeetingAgent();Amelia:jadeproject.MeetingAgent();" />
+    </java>
+  </target>
+  <target name="run8" description="create agents" >
+    <java fork="true" classpath="jade/lib/jade.jar;build" classname="jade.Boot">
+      <arg value="-gui" />
+      <arg value="Alicja:jadeproject.MeetingAgent();Wojciech:jadeproject.MeetingAgent();Aleksandra:jadeproject.MeetingAgent();Mikolaj:jadeproject.MeetingAgent();Jan:jadeproject.MeetingAgent();Amelia:jadeproject.MeetingAgent();Jakub:jadeproject.MeetingAgent();Maja:jadeproject.MeetingAgent();" />
+    </java>
+  </target>
 </project>
